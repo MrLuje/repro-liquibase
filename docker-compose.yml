@@ -1,0 +1,38 @@
+services:
+  postgresql:
+    image: postgres
+    environment:
+      - POSTGRES_DB=test
+      - POSTGRES_PASSWORD=mysecretpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgresql:/docker-entrypoint-initdb.d
+
+  postgresql_target:
+    image: postgres
+    environment:
+      - POSTGRES_DB=test
+      - POSTGRES_PASSWORD=mysecretpassword
+    volumes:
+      - ./postgresql_target:/docker-entrypoint-initdb.d
+
+  liquibase:
+    image: liquibase/liquibase
+    command: |
+      liquibase diff-changelog
+      --changelog-file=/liquibase/changelog/dbchangelog.sql
+      --url="jdbc:postgresql://postgresql:5432/test?currentSchema=public"
+      --username=postgres
+      --password=mysecretpassword
+      --referenceUrl="jdbc:postgresql://postgresql_target:5432/test?currentSchema=public"
+      --referenceUsername=postgres
+      --referencePassword=mysecretpassword
+    profiles:
+      - manual
+    volumes:
+      - ./changelog:/liquibase/changelog
+    depends_on:
+      - postgresql
+      - postgresql_target
+    user: root
